@@ -13,6 +13,9 @@ A lightweight SwiftUI toast presenter that displays transient messages above you
 - Optional onDismiss callback when the toast fully disappears
 - Overlay window that passes touches through to underlying content where appropriate
 
+## Requirements
+- iOS 16+
+
 ## Installation
 Install via Swift Package Manager using the repository URL:
 
