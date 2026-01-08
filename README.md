@@ -23,7 +23,7 @@ https://github.com/Livsy90/LivsyToast.git
 ## Usage
 Use the `toast` view modifier on any view hierarchy. Control visibility with a `@State` binding. You can either provide a custom view or a simple message string.
 
-### Example (custom content, generic overload)
+### Example
 ```swift
 import SwiftUI
 
