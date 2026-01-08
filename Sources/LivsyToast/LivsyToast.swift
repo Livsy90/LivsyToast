@@ -28,19 +28,18 @@ public extension View {
     ///     @State private var isToastPresented: Bool = false
     ///
     ///     var body: some View {
-    ///         ScrollView {
-    ///             Button("Show Toast") {
-    ///                 isToastPresented.toggle()
-    ///             }
+    ///         Button("Show Toast") {
+    ///            isToastPresented.toggle()
     ///         }
-    ///         .frame(maxWidth: .infinity)
     ///         .toast(
     ///             isPresented: $isToastPresented,
     ///             duration: 2,
     ///             edge: .top
     ///         ) {
     ///             HStack(spacing: 12) {
-    ///                 Image(systemName: "bell.fill").foregroundStyle(.yellow)
+    ///                 Image(systemName: "bell.fill")
+    ///                     .foregroundStyle(.yellow)
+    ///                     
     ///                 Text("Custom content toast")
     ///                     .font(.callout)
     ///                     .fontWeight(.semibold)
@@ -100,12 +99,9 @@ public extension View {
     ///     @State private var isToastPresented: Bool = false
     ///
     ///     var body: some View {
-    ///         ScrollView {
-    ///             Button("Show Toast") {
-    ///                 isToastPresented.toggle()
-    ///             }
+    ///          Button("Show Toast") {
+    ///             isToastPresented.toggle()
     ///         }
-    ///         .frame(maxWidth: .infinity)
     ///         .toast(
     ///             isPresented: $isToastPresented,
     ///             message: "Hello, this is a toast message!",
@@ -389,18 +385,29 @@ private final class OverlayWindow {
         @State private var isToastPresented: Bool = false
         
         var body: some View {
-            ScrollView {
-                Button("Show Toast") {
-                    isToastPresented.toggle()
-                }
+            Button("Show Toast") {
+                isToastPresented.toggle()
             }
-            .frame(maxWidth: .infinity)
             .toast(
                 isPresented: $isToastPresented,
-                message: "Hello, this is a toast message!",
                 duration: 2,
                 edge: .top
-            )
+            ) {
+                HStack(spacing: 12) {
+                    Image(systemName: "bell.fill")
+                        .foregroundStyle(.yellow)
+                    
+                    Text("Custom content toast")
+                        .font(.callout)
+                        .fontWeight(.semibold)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+            }
         }
     }
     

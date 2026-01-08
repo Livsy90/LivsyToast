@@ -12,10 +12,14 @@ A lightweight SwiftUI toast presenter that displays transient messages above you
 - Overlay window that passes touches through to underlying content where appropriate
 
 ## Installation
-Add `LivsyToast.swift` to your project or include this source as part of your Swift Package.
+Install via Swift Package Manager using the repository URL:
+
+```
+https://github.com/Livsy90/LivsyToast.git
+```
 
 ## Usage
-Use the `toast` view modifier on any view hierarchy. Control visibility with a `@State` binding. You can either provide a custom view (generic overload) or a simple message string (convenience overload).
+Use the `toast` view modifier on any view hierarchy. Control visibility with a `@State` binding. You can either provide a custom view or a simple message string.
 
 ### Example (custom content, generic overload)
 ```swift
@@ -37,7 +41,9 @@ struct ToastDemo: View {
             edge: .top
         ) {
             HStack(spacing: 12) {
-                Image(systemName: "bell.fill").foregroundStyle(.yellow)
+                Image(systemName: "bell.fill")
+                    .foregroundStyle(.yellow)
+                
                 Text("Custom content toast")
                     .font(.callout)
                     .fontWeight(.semibold)
@@ -51,3 +57,4 @@ struct ToastDemo: View {
         }
     }
 }
+```
