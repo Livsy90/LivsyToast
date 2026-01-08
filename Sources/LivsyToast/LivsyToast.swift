@@ -39,7 +39,7 @@ public extension View {
     ///             HStack(spacing: 12) {
     ///                 Image(systemName: "bell.fill")
     ///                     .foregroundStyle(.yellow)
-    ///                     
+    ///
     ///                 Text("Custom content toast")
     ///                     .font(.callout)
     ///                     .fontWeight(.semibold)
@@ -200,7 +200,7 @@ private struct ToastOverlayModifier<T: View>: ViewModifier {
         case .bottom: .bottom
         }
     }
-
+    
     func body(content: Content) -> some View {
         content
             .onChange(of: isPresented) { _, newValue in
@@ -240,7 +240,7 @@ private struct ToastOverlayModifier<T: View>: ViewModifier {
                                     case .top:
                                         if dy < -threshold { shouldDismiss = true }
                                     }
-
+                                    
                                     if shouldDismiss {
                                         // Trigger dismiss and reset offset
                                         withAnimation(.bouncy(duration: animationDuration)) {
@@ -322,6 +322,7 @@ private struct ToastWindowModifier<T: View>: ViewModifier {
 
 /// Custom UIWindow that passes through touches in transparent/non-interactive areas
 private final class PassThroughWindow: UIWindow {
+    
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         guard
             let hitView = super.hitTest(point, with: event),
@@ -329,19 +330,46 @@ private final class PassThroughWindow: UIWindow {
         else {
             return nil
         }
-
-        if #available(iOS 18, *) {
-            for subview in rootView.subviews.reversed() {
-                /// Finding if any of rootview's subview is receiving hit test
-                let pointInSubview = subview.convert(point, from: rootView)
-                if subview.hitTest(pointInSubview, with: event) != nil {
-                    return hitView
-                }
+        
+        if #available(iOS 26, *) {
+            if rootView.layer.hitTest(point)?.name == nil {
+                return rootView
+            } else {
+                return getSubview(
+                    at: point,
+                    with: event,
+                    hitView: hitView,
+                    rootView: rootView
+                )
             }
-            return nil
         } else {
-            return hitView == rootView ? nil : hitView
+            if #available(iOS 18, *) {
+                return getSubview(
+                    at: point,
+                    with: event,
+                    hitView: hitView,
+                    rootView: rootView
+                )
+            } else {
+                return hitView == rootView ? nil : hitView
+            }
         }
+    }
+    
+    private func getSubview(
+        at point: CGPoint,
+        with event: UIEvent?,
+        hitView: UIView,
+        rootView: UIView
+    ) -> UIView? {
+        for subview in rootView.subviews.reversed() {
+            let pointInSubview = subview.convert(point, from: rootView)
+            if subview.hitTest(pointInSubview, with: event) != nil {
+                return hitView
+            }
+        }
+        
+        return nil
     }
 }
 
@@ -355,17 +383,17 @@ private final class OverlayWindow {
             .shared
             .connectedScenes
             .compactMap { $0 as? UIWindowScene }
-
+        
         let scene = scenes.first(where: { $0.activationState == .foregroundActive })
-            ?? scenes.first(where: { $0.activationState == .foregroundInactive })
-            ?? scenes.first
-
+        ?? scenes.first(where: { $0.activationState == .foregroundInactive })
+        ?? scenes.first
+        
         guard let scene else { return }
-
+        
         let window = PassThroughWindow(windowScene: scene)
         let controller = UIHostingController(rootView: content())
         controller.view.backgroundColor = .clear
-
+        
         window.windowLevel = .alert + 1
         window.backgroundColor = .clear
         window.rootViewController = controller
