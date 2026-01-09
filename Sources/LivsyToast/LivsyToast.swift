@@ -219,6 +219,7 @@ private struct ToastOverlayModifier<T: View>: ViewModifier {
                         .gesture(
                             DragGesture(minimumDistance: 5, coordinateSpace: .local)
                                 .onChanged { value in
+                                    cancelAutoDismiss()
                                     // Only track vertical drag in the correct direction relative to edge
                                     let dy = value.translation.height
                                     switch edge {
@@ -247,6 +248,7 @@ private struct ToastOverlayModifier<T: View>: ViewModifier {
                                             isPresented = false
                                         }
                                     } else {
+                                        scheduleAutoDismiss()
                                         // Snap back
                                         withAnimation(.bouncy(duration: animationDuration)) {
                                             dragOffsetY = 0
