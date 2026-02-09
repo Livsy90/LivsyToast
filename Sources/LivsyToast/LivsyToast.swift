@@ -310,8 +310,9 @@ private struct ToastWindowModifier<T: View>: ViewModifier {
                             )
                             .preferredColorScheme(colorScheme)
                     }
-                    
-                    isToastPresented = true
+                    withAnimation {
+                        isToastPresented = true
+                    }
                 } else {
                     isToastPresented = false
                 }
@@ -322,39 +323,46 @@ private struct ToastWindowModifier<T: View>: ViewModifier {
     }
 }
 
-/// Custom UIWindow that passes through touches in transparent/non-interactive areas
-private final class PassThroughWindow: UIWindow {
-    
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        guard
-            let hitView = super.hitTest(point, with: event),
-            let rootView = rootViewController?.view
-        else {
+final class PassThroughWindow: UIWindow {
+    private var handledEvents = Set<UIEvent>()
+   
+    override final func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let rootViewController, let rootView = rootViewController.view else { return nil }
+        
+        guard let event else {
+            return super.hitTest(point, with: nil)
+        }
+        
+        guard let hitView = super.hitTest(point, with: event) else {
+            handledEvents.removeAll()
             return nil
         }
         
-        if #available(iOS 26, *) {
-            if rootView.layer.hitTest(point)?.name == nil {
-                return rootView
+        if handledEvents.contains(event) {
+            handledEvents.removeAll()
+            return hitView
+        } else if #available(iOS 26, *) {
+            handledEvents.insert(event)
+            let name = rootView.layer.hitTest(point)?.name
+            if name == nil {
+                return hitView
+            } else if name?.starts(with: "@") == true { // Liquid Glass
+                if let realHit = deepestHitView(in: rootView, at: point, with: event) {
+                    if realHit === rootView {
+                        return nil
+                    } else {
+                        return realHit
+                    }
+                } else {
+                    return nil
+                }
             } else {
-                return getSubview(
-                    at: point,
-                    with: event,
-                    hitView: hitView,
-                    rootView: rootView
-                )
+                return nil
             }
+        } else if hitView == rootView {
+            return nil
         } else {
-            if #available(iOS 18, *) {
-                return getSubview(
-                    at: point,
-                    with: event,
-                    hitView: hitView,
-                    rootView: rootView
-                )
-            } else {
-                return hitView == rootView ? nil : hitView
-            }
+            return getSubview(at: point, with: event, hitView: hitView, rootView: rootView)
         }
     }
     
@@ -372,6 +380,19 @@ private final class PassThroughWindow: UIWindow {
         }
         
         return nil
+    }
+    
+    private func deepestHitView(in root: UIView, at point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard !root.isHidden, root.alpha > 0.01, root.isUserInteractionEnabled else { return nil }
+
+        for subview in root.subviews.reversed() {
+            let pointInSubview = subview.convert(point, from: root)
+            if let hit = deepestHitView(in: subview, at: pointInSubview, with: event) {
+                return hit
+            }
+        }
+        
+        return root.point(inside: point, with: event) ? root : nil
     }
 }
 
@@ -443,5 +464,3 @@ private final class OverlayWindow {
     
     return ToastDemo()
 }
-
-
