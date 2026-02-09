@@ -359,27 +359,12 @@ final class PassThroughWindow: UIWindow {
             } else {
                 return nil
             }
-        } else if hitView == rootView {
-            return nil
+        } else if #available(iOS 18, *) {
+            handledEvents.insert(event)
+            return hitView
         } else {
-            return getSubview(at: point, with: event, hitView: hitView, rootView: rootView)
+            return hitView
         }
-    }
-    
-    private func getSubview(
-        at point: CGPoint,
-        with event: UIEvent?,
-        hitView: UIView,
-        rootView: UIView
-    ) -> UIView? {
-        for subview in rootView.subviews.reversed() {
-            let pointInSubview = subview.convert(point, from: rootView)
-            if subview.hitTest(pointInSubview, with: event) != nil {
-                return hitView
-            }
-        }
-        
-        return nil
     }
     
     private func deepestHitView(in root: UIView, at point: CGPoint, with event: UIEvent?) -> UIView? {
