@@ -324,60 +324,37 @@ private struct ToastWindowModifier<T: View>: ViewModifier {
 }
 
 final class PassThroughWindow: UIWindow {
-    private var handledEvents = Set<UIEvent>()
-   
+    private var handledEvenets = Set<UIEvent>()
+
     override final func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         guard let rootViewController, let rootView = rootViewController.view else { return nil }
-        
+
         guard let event else {
             return super.hitTest(point, with: nil)
         }
-        
+
         guard let hitView = super.hitTest(point, with: event) else {
-            handledEvents.removeAll()
+            handledEvenets.removeAll()
             return nil
         }
-        
-        if handledEvents.contains(event) {
-            handledEvents.removeAll()
+        if handledEvenets.contains(event) {
+            handledEvenets.removeAll()
             return hitView
         } else if #available(iOS 26, *) {
-            handledEvents.insert(event)
-            let name = rootView.layer.hitTest(point)?.name
-            if name == nil {
+            let layerName = rootView.layer.hitTest(point)?.name
+            if layerName == nil || layerName?.hasPrefix("@") == true {
+                handledEvenets.insert(event)
                 return hitView
-            } else if name?.starts(with: "@") == true { // Liquid Glass
-                if let realHit = deepestHitView(in: rootView, at: point, with: event) {
-                    if realHit === rootView {
-                        return nil
-                    } else {
-                        return realHit
-                    }
-                } else {
-                    return nil
-                }
-            } else {
-                return nil
             }
+            return hitView == rootView ? nil : hitView
+        } else if hitView == rootView {
+            return nil
         } else if #available(iOS 18, *) {
-            handledEvents.insert(event)
+            handledEvenets.insert(event)
             return hitView
         } else {
             return hitView
         }
-    }
-    
-    private func deepestHitView(in root: UIView, at point: CGPoint, with event: UIEvent?) -> UIView? {
-        guard !root.isHidden, root.alpha > 0.01, root.isUserInteractionEnabled else { return nil }
-
-        for subview in root.subviews.reversed() {
-            let pointInSubview = subview.convert(point, from: root)
-            if let hit = deepestHitView(in: subview, at: pointInSubview, with: event) {
-                return hit
-            }
-        }
-        
-        return root.point(inside: point, with: event) ? root : nil
     }
 }
 
