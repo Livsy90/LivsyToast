@@ -324,7 +324,7 @@ private struct ToastWindowModifier<T: View>: ViewModifier {
 }
 
 final class PassThroughWindow: UIWindow {
-    private var handledEvenets = Set<UIEvent>()
+    private var handledEvents = Set<UIEvent>()
 
     override final func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         guard let rootViewController, let rootView = rootViewController.view else { return nil }
@@ -334,23 +334,23 @@ final class PassThroughWindow: UIWindow {
         }
 
         guard let hitView = super.hitTest(point, with: event) else {
-            handledEvenets.removeAll()
+            handledEvents.removeAll()
             return nil
         }
-        if handledEvenets.contains(event) {
-            handledEvenets.removeAll()
+        if handledEvents.contains(event) {
+            handledEvents.removeAll()
             return hitView
         } else if #available(iOS 26, *) {
             let layerName = rootView.layer.hitTest(point)?.name
             if layerName == nil || layerName?.hasPrefix("@") == true {
-                handledEvenets.insert(event)
+                handledEvents.insert(event)
                 return hitView
             }
             return hitView == rootView ? nil : hitView
         } else if hitView == rootView {
             return nil
         } else if #available(iOS 18, *) {
-            handledEvenets.insert(event)
+            handledEvents.insert(event)
             return hitView
         } else {
             return hitView
