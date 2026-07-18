@@ -133,8 +133,8 @@ public extension View {
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(20)
-                        .glassedEffect(in: .rect(cornerRadius: 33), interactive: true)
-                        .contentShape(.rect)
+                        .glassedEffect(in: RoundedRectangle(cornerRadius: 33), interactive: true)
+                        .contentShape(Rectangle())
                         .padding(20)
                 }
             )
@@ -143,6 +143,29 @@ public extension View {
 }
 
 private extension View {
+    @ViewBuilder
+    func onChangeCompat<V: Equatable>(
+        of value: V,
+        perform action: @escaping (V) -> Void
+    ) -> some View {
+        if #available(iOS 17.0, *) {
+            self.onChange(of: value) { _, newValue in
+                action(newValue)
+            }
+        } else {
+            self.onChange(of: value, perform: action)
+        }
+    }
+
+    @ViewBuilder
+    func toastEntryTransition(edge: Edge) -> some View {
+        if #available(iOS 17.0, *) {
+            transition(.move(edge: edge).combined(with: .blurReplace))
+        } else {
+            transition(.move(edge: edge).combined(with: .opacity))
+        }
+    }
+
     func toastOverlay<T: View>(
         isPresented: Binding<Bool>,
         duration: TimeInterval? = 4,
@@ -179,6 +202,32 @@ private extension View {
     }
 }
 
+@available(iOS 17.0, *)
+private func toastAnimationModern(duration: TimeInterval) -> Animation {
+    .bouncy(duration: duration)
+}
+
+private func toastAnimation(duration: TimeInterval) -> Animation {
+    if #available(iOS 17.0, *) {
+        toastAnimationModern(duration: duration)
+    } else {
+        .spring(response: duration, dampingFraction: 0.75)
+    }
+}
+
+@available(iOS 17.0, *)
+private func toastPresentAnimationModern() -> Animation {
+    .bouncy
+}
+
+private func toastPresentAnimation() -> Animation {
+    if #available(iOS 17.0, *) {
+        toastPresentAnimationModern()
+    } else {
+        .spring(response: 0.3, dampingFraction: 0.75)
+    }
+}
+
 private struct ToastOverlayModifier<T: View>: ViewModifier {
     @Binding var isPresented: Bool
     let duration: TimeInterval?
@@ -200,10 +249,56 @@ private struct ToastOverlayModifier<T: View>: ViewModifier {
         case .bottom: .bottom
         }
     }
+
+    @ViewBuilder
+    private func presentedToast() -> some View {
+        toastView()
+            .offset(y: dragOffsetY)
+            .opacity(Double(max(CGFloat(0.5), 1 - abs(dragOffsetY) / 200)))
+            .gesture(
+                DragGesture(minimumDistance: 5, coordinateSpace: .local)
+                    .onChanged { value in
+                        cancelAutoDismiss()
+                        let dy = value.translation.height
+                        switch edge {
+                        case .bottom:
+                            dragOffsetY = max(0, dy)
+                        case .top:
+                            dragOffsetY = min(0, dy)
+                        }
+                    }
+                    .onEnded { value in
+                        let threshold: CGFloat = 30
+                        let dy = value.translation.height
+                        var shouldDismiss = false
+                        switch edge {
+                        case .bottom:
+                            if dy > threshold { shouldDismiss = true }
+                        case .top:
+                            if dy < -threshold { shouldDismiss = true }
+                        }
+
+                        if shouldDismiss {
+                            withAnimation(toastAnimation(duration: animationDuration)) {
+                                isPresented = false
+                            }
+                        } else {
+                            scheduleAutoDismiss()
+                            withAnimation(toastAnimation(duration: animationDuration)) {
+                                dragOffsetY = 0
+                            }
+                        }
+                    }
+            )
+            .onAppear {
+                scheduleAutoDismiss()
+            }
+            .toastEntryTransition(edge: transitionEdge)
+    }
     
     func body(content: Content) -> some View {
         content
-            .onChange(of: isPresented) { _, newValue in
+            .onChangeCompat(of: isPresented) { newValue in
                 guard !newValue else { return }
                 cancelAutoDismiss()
                 Task { @MainActor in
@@ -213,56 +308,10 @@ private struct ToastOverlayModifier<T: View>: ViewModifier {
             }
             .overlay(alignment: aligment) {
                 if isPresented {
-                    toastView()
-                        .offset(y: dragOffsetY)
-                        .opacity(Double(max(CGFloat(0.5), 1 - abs(dragOffsetY) / 200)))
-                        .gesture(
-                            DragGesture(minimumDistance: 5, coordinateSpace: .local)
-                                .onChanged { value in
-                                    cancelAutoDismiss()
-                                    // Only track vertical drag in the correct direction relative to edge
-                                    let dy = value.translation.height
-                                    switch edge {
-                                    case .bottom:
-                                        // Allow dragging down (positive dy); clamp upwards movement to zero to avoid jitter
-                                        dragOffsetY = max(0, dy)
-                                    case .top:
-                                        // Allow dragging up (negative dy); clamp downwards movement to zero
-                                        dragOffsetY = min(0, dy)
-                                    }
-                                }
-                                .onEnded { value in
-                                    let threshold: CGFloat = 30
-                                    let dy = value.translation.height
-                                    var shouldDismiss = false
-                                    switch edge {
-                                    case .bottom:
-                                        if dy > threshold { shouldDismiss = true }
-                                    case .top:
-                                        if dy < -threshold { shouldDismiss = true }
-                                    }
-                                    
-                                    if shouldDismiss {
-                                        // Trigger dismiss and reset offset
-                                        withAnimation(.bouncy(duration: animationDuration)) {
-                                            isPresented = false
-                                        }
-                                    } else {
-                                        scheduleAutoDismiss()
-                                        // Snap back
-                                        withAnimation(.bouncy(duration: animationDuration)) {
-                                            dragOffsetY = 0
-                                        }
-                                    }
-                                }
-                        )
-                        .transition(.move(edge: transitionEdge).combined(with: .blurReplace))
-                        .onAppear {
-                            scheduleAutoDismiss()
-                        }
+                    presentedToast()
                 }
             }
-            .animation(.bouncy, value: isPresented)
+            .animation(toastPresentAnimation(), value: isPresented)
     }
     
     private func scheduleAutoDismiss() {
@@ -294,7 +343,7 @@ private struct ToastWindowModifier<T: View>: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .onChange(of: isPresented) { _, newValue in
+            .onChangeCompat(of: isPresented) { newValue in
                 if newValue {
                     overlay.show {
                         Color.clear
@@ -317,7 +366,7 @@ private struct ToastWindowModifier<T: View>: ViewModifier {
                     isToastPresented = false
                 }
             }
-            .onChange(of: isToastPresented) { _, newValue in
+            .onChangeCompat(of: isToastPresented) { newValue in
                 if !newValue { isPresented = false }
             }
     }
