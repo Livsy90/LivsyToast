@@ -14,7 +14,7 @@ A lightweight SwiftUI toast presenter that displays transient messages above you
 - Overlay window that passes touches through to underlying content where appropriate
 
 ## Requirements
-- iOS 17+
+- iOS 15+
 
 ## Installation
 Install via Swift Package Manager using the repository URL:
