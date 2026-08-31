@@ -2,9 +2,9 @@
 
 A lightweight SwiftUI toast presenter that displays transient messages above your UI using a transparent, pass-through overlay window. It supports showing from the top or bottom edge, auto-dismiss after a configurable duration, and interactive drag-to-dismiss.
 
-<img width="320" src="https://github.com/user-attachments/assets/5cb1094b-2e1c-41a2-a0b0-85fef6fea065" />
+https://github.com/user-attachments/assets/5cb1094b-2e1c-41a2-a0b0-85fef6fea065
 
-<img width="320" src="https://github.com/user-attachments/assets/197de35e-05de-4fc2-8690-d2a1bc8263b3" />
+https://github.com/user-attachments/assets/197de35e-05de-4fc2-8690-d2a1bc8263b3
 
 ## Features
 
